@@ -70,6 +70,11 @@ class XGBoost(BaseModel):
 
         self.prediction_probabilities = probabilities
         return self.prediction_probabilities
+    
+    def get_leaf_embeddings(self, X):
+        d = xgb.DMatrix(X)
+        leaf = self.model.predict(d, pred_leaf=True)
+        return leaf.astype("int32")
 
     @classmethod
     def define_trial_parameters(cls, trial, args):
@@ -158,6 +163,13 @@ class CatBoost(BaseModel):
             X[:, self.args.cat_idx] = X[:, self.args.cat_idx].astype("int")
 
         return super().predict(X)
+    
+    def get_leaf_embeddings(self, X):
+        if self.args.cat_idx:
+            X = X.astype("object")
+            X[:, self.args.cat_idx] = X[:, self.args.cat_idx].astype("int")
+        leaf = self.model.calc_leaf_indexes(X)
+        return np.asarray(leaf, dtype="int32")
 
     @classmethod
     def define_trial_parameters(cls, trial, args):
@@ -242,6 +254,10 @@ class LightGBM(BaseModel):
 
         self.prediction_probabilities = probabilities
         return self.prediction_probabilities
+    
+    def get_leaf_embeddings(self, X):
+        leaf = self.model.predict(X, pred_leaf=True)
+        return leaf.astype("int32")
 
     @classmethod
     def define_trial_parameters(cls, trial, args):

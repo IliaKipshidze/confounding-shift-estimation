@@ -23,3 +23,9 @@ early_stopping_rounds: 20
 epochs: 500
 logging_period: 100
 scale_numerical_features: Quantile
+
+###### cluster parameters
+compute_cluster_shift: true
+cluster_k: 20
+cluster_pca_dim: 5
+cluster_seed: 0

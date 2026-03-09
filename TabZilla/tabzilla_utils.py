@@ -12,6 +12,8 @@ from tabzilla_data_processing import process_data
 from tabzilla_datasets import TabularDataset
 from utils.scorer import BinScorer, ClassScorer, RegScorer
 from utils.timer import Timer
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
 
 
 class NpEncoder(json.JSONEncoder):
@@ -79,6 +81,7 @@ class ExperimentResult:
         predictions,
         probabilities,
         ground_truth,
+        cluster_shift=None,
     ) -> None:
         self.dataset = dataset
         self.scaler = scaler
@@ -88,6 +91,7 @@ class ExperimentResult:
         self.predictions = predictions
         self.probabilities = probabilities
         self.ground_truth = ground_truth
+        self.cluster_shift = cluster_shift
 
         # we will set these after initialization
         self.hparam_source = None
@@ -115,6 +119,7 @@ class ExperimentResult:
             "scorers": {
                 name: scorer.get_results() for name, scorer in self.scorers.items()
             },
+            "cluster_shift": self.cluster_shift,
         }
 
         # write results
@@ -212,6 +217,14 @@ def cross_validation(
         "test": [],
     }
 
+    cluster_shift = {
+        "tv": [],
+        "p_train": [],
+        "p_test": [],
+        "k": args.cluster_k if hasattr(args, "cluster_k") else None,
+        "pca_dim": args.cluster_pca_dim if hasattr(args, "cluster_pca_dim") else None,
+    }
+
     start_time = time.time()
     # iterate over all train/val/test splits in the dataset property split_indeces
     for i, split_dictionary in enumerate(dataset.split_indeces):
@@ -251,6 +264,29 @@ def cross_validation(
             y_val,
         )
         timers["train"].end()
+
+        if getattr(args, "compute_cluster_shift", False) and hasattr(curr_model, "get_leaf_embeddings"):
+            leaf_train = curr_model.get_leaf_embeddings(X_train)
+            leaf_test = curr_model.get_leaf_embeddings(X_test)
+
+            pca_dim = min(args.cluster_pca_dim, leaf_train.shape[1])
+            pca = PCA(n_components=pca_dim, random_state=args.cluster_seed)
+            z_train = pca.fit_transform(leaf_train)
+            z_test = pca.transform(leaf_test)
+
+            kmeans = KMeans(n_clusters=args.cluster_k, random_state=args.cluster_seed, n_init="auto")
+            c_train = kmeans.fit_predict(z_train)
+            c_test = kmeans.predict(z_test)
+
+            k = args.cluster_k
+            p_tr = np.bincount(c_train, minlength=k) / len(c_train)
+            p_te = np.bincount(c_test, minlength=k) / len(c_test)
+
+            tv = 0.5 * np.abs(p_tr - p_te).sum()
+
+            cluster_shift["tv"].append(float(tv))
+            cluster_shift["p_train"].append(p_tr.tolist())
+            cluster_shift["p_test"].append(p_te.tolist())
 
         # evaluate on train set
         timers["train-eval"].start()
@@ -305,6 +341,7 @@ def cross_validation(
         predictions=predictions,
         probabilities=probabilities,
         ground_truth=ground_truth,
+        cluster_shift=cluster_shift,
     )
 
 
@@ -474,4 +511,14 @@ def get_experiment_parser():
         default=0,
         help="Random seed for subset selection.",
     )
+
+    experiment_parser.add(
+        "--compute_cluster_shift",
+        action="store_true",
+        help="Compute cluster mixture shift using tree leaf embeddings."
+    )
+    experiment_parser.add("--cluster_k", type=int, default=20)
+    experiment_parser.add("--cluster_pca_dim", type=int, default=20)
+    experiment_parser.add("--cluster_seed", type=int, default=0)
+
     return experiment_parser
