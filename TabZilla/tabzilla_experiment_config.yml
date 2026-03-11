@@ -25,7 +25,7 @@ logging_period: 100
 scale_numerical_features: Quantile
 
 ###### cluster parameters
-compute_cluster_shift: true
-cluster_k: 20
-cluster_pca_dim: 5
+compute_cluster_shift: false
+cluster_k: 4
+cluster_pca_dim: 2
 cluster_seed: 0
