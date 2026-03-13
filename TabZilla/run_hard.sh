@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+source ../scripts/HARD_DATASETS_BENCHMARK.sh
+
+models=("XGBoost" "CatBoost" "TabNet" "TabTransformer" "TabPFNModel" "rtdl_ResNet")
+base_config="./tabzilla_experiment_config_gpu.yml"
+python_bin="/home/ilia.kipshidze/projects/confounding-shift-estimation/Tabz/bin/python"
+run_name="hard_run_$(date +%Y%m%d_%H%M%S)"
+failures=0
+
+for ds in "${DATASETS[@]}"; do
+  dataset_dir="./datasets/$ds"
+
+  if [ ! -d "$dataset_dir" ]; then
+    echo "Skipping missing dataset: $ds"
+    continue
+  fi
+
+  for model in "${models[@]}"; do
+    out_dir="./results_hard/$run_name/$model/$ds"
+
+    if [ -d "$out_dir" ] && [ "$(ls -A "$out_dir" 2>/dev/null)" ]; then
+      echo "Skipping already completed model=$model dataset=$ds"
+      continue
+    fi
+
+    mkdir -p "$out_dir"
+
+    safe_model=$(echo "$model" | tr '/' '_' | tr ':' '_' | tr ' ' '_')
+    safe_ds=$(echo "$ds" | tr '/' '_' | tr ':' '_' | tr ' ' '_')
+    tmp_config="$(mktemp "./tmp_${safe_model}_${safe_ds}.XXXXXX.yml")"
+
+    awk -v out="$out_dir" '
+      BEGIN {done=0}
+      /^output_dir:/ {print "output_dir: " out; done=1; next}
+      {print}
+      END {if (!done) print "output_dir: " out}
+    ' "$base_config" > "$tmp_config"
+
+    echo "Running model=$model dataset=$ds"
+
+    if ! "$python_bin" tabzilla_experiment.py \
+      --experiment_config "$tmp_config" \
+      --dataset_dir "$dataset_dir" \
+      --model_name "$model"; then
+      echo "FAILED model=$model dataset=$ds"
+      failures=$((failures + 1))
+    fi
+
+    rm -f "$tmp_config"
+  done
+done
+
+echo "Finished with $failures failure(s)"

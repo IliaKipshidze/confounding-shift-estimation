@@ -136,3 +136,10 @@ dmypy.json
 
 # codebase specific 
 TabZilla/models/hopular/auxiliary/resources/*
+Tabz/
+TabZilla/output/
+TabZilla/results_hard/
+TabZilla/tmp_*.yml
+TabZilla/__pycache__/
+__pycache__/
+*.pyc
