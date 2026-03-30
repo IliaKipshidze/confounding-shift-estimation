@@ -1,0 +1,16 @@
+{
+  "saved_models_dir": "TabZilla\\tmp_saved_xgb_models",
+  "datasets_dir": "C:\\Users\\Ilia\\Desktop\\UNI III semester\\Relational ML RIL\\tabzilla\\TabZilla\\datasets",
+  "output_dir": "TabZilla\\tmp_tv_from_saved_models",
+  "cluster_k": 20,
+  "cluster_dim": 20,
+  "cluster_seed": 0,
+  "datasets": [
+    {
+      "dataset": "openml__Australian__146818",
+      "mean_tv": 0.20416666666666666,
+      "std_tv": 0.04724789108002798,
+      "summary_path": "TabZilla\\tmp_tv_from_saved_models\\openml__Australian__146818_tv_summary.json"
+    }
+  ]
+}
