@@ -1,0 +1,18 @@
+{
+  "xgb_results_dir": "C:\\Users\\Ilia\\Desktop\\UNI III semester\\Relational ML RIL\\tabzilla\\TabZilla\\results_hard\\hard_run_main\\XGBoost",
+  "datasets_dir": "C:\\Users\\Ilia\\Desktop\\UNI III semester\\Relational ML RIL\\tabzilla\\TabZilla\\datasets",
+  "output_dir": "TabZilla\\tmp_kmeans_tv_test",
+  "cluster_k": 5,
+  "cluster_dim": 5,
+  "cluster_seed": 0,
+  "cluster_prediction_method": "kmeans",
+  "force_cpu": true,
+  "datasets": [
+    {
+      "dataset": "openml__Australian__146818",
+      "mean_tv": 0.09782608695652173,
+      "std_tv": 0.037011539042091056,
+      "summary_path": "TabZilla\\tmp_kmeans_tv_test\\openml__Australian__146818_tv_summary.json"
+    }
+  ]
+}

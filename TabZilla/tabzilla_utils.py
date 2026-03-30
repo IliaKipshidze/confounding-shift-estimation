@@ -219,13 +219,7 @@ def cross_validation(
         "test": [],
     }
 
-    cluster_shift = {
-        "tv": [],
-        "p_train": [],
-        "p_test": [],
-        "k": args.cluster_k if hasattr(args, "cluster_k") else None,
-        "pca_dim": args.cluster_pca_dim if hasattr(args, "cluster_pca_dim") else None,
-    }
+
 
     start_time = time.time()
     # iterate over all train/val/test splits in the dataset property split_indeces
@@ -267,144 +261,6 @@ def cross_validation(
         )
         timers["train"].end()
 
-        if getattr(args, "compute_cluster_shift", False) and hasattr(curr_model, "get_leaf_embeddings"):
-            leaf_train = curr_model.get_leaf_embeddings(X_train)
-            # Old approach: also compute test leaf embeddings and assign test samples by nearest cluster centroid.
-            # leaf_test = curr_model.get_leaf_embeddings(X_test)
-
-            encoder = OneHotEncoder(handle_unknown="ignore")
-            encoded_train = encoder.fit_transform(leaf_train)
-            # encoded_test = encoder.transform(leaf_test)
-
-            if encoded_train.shape[1] > 1:
-                reduction_dim = min(args.cluster_pca_dim, encoded_train.shape[1] - 1)
-                reducer = TruncatedSVD(
-                    n_components=reduction_dim,
-                    random_state=args.cluster_seed,
-                )
-                z_train = reducer.fit_transform(encoded_train)
-                # z_test = reducer.transform(encoded_test)
-            else:
-                reduction_dim = encoded_train.shape[1]
-                z_train = encoded_train.toarray()
-                # z_test = encoded_test.toarray()
-
-
-            # # Temporary diagnostic: save a 2D train scatter and an elbow plot for this fold.
-            # max_k = min(args.cluster_k, len(z_train))
-            # if max_k >= 2:
-            #     import matplotlib
-
-            #     matplotlib.use("Agg")
-            #     import matplotlib.pyplot as plt
-
-            #     elbow_dir = Path("cluster_k_sweeps") / args.model_name / args.dataset
-            #     elbow_dir.mkdir(parents=True, exist_ok=True)
-            #     diagnostic_stamp = time.time_ns()
-
-            #     if z_train.shape[1] >= 2:
-            #         scatter_path = elbow_dir / (
-            #             f"fold_{i}_train_projection_{diagnostic_stamp}.png"
-            #         )
-
-            #         # Old temporary version: uncolored 2D projection.
-            #         # fig, ax = plt.subplots(figsize=(6, 5))
-            #         # ax.scatter(z_train[:, 0], z_train[:, 1], s=10, alpha=0.6)
-            #         # ax.set_xlabel("Component 1")
-            #         # ax.set_ylabel("Component 2")
-            #         # ax.set_title(
-            #         #     f"Train Projection: {args.model_name} / {args.dataset} / fold {i}"
-            #         # )
-            #         # ax.grid(True, alpha=0.3)
-            #         # fig.tight_layout()
-            #         # fig.savefig(scatter_path, dpi=150)
-            #         # plt.close(fig)
-
-            #     sweep_ks = list(range(2, max_k + 1))
-            #     sweep_losses = []
-            #     for sweep_k in sweep_ks:
-            #         sweep_kmeans = KMeans(
-            #             n_clusters=sweep_k,
-            #             random_state=args.cluster_seed,
-            #             n_init="auto",
-            #         )
-            #         sweep_kmeans.fit(z_train)
-            #         sweep_losses.append(float(sweep_kmeans.inertia_))
-
-            #     elbow_path = elbow_dir / (
-            #         f"fold_{i}_kmax_{args.cluster_k}_{diagnostic_stamp}.png"
-            #     )
-
-            #     fig, ax = plt.subplots(figsize=(6, 4))
-            #     ax.plot(sweep_ks, sweep_losses, marker="o")
-            #     ax.set_xlabel("k")
-            #     ax.set_ylabel("KMeans loss (inertia)")
-            #     ax.set_title(f"Elbow Plot: {args.model_name} / {args.dataset} / fold {i}")
-            #     ax.grid(True, alpha=0.3)
-            #     fig.tight_layout()
-            #     fig.savefig(elbow_path, dpi=150)
-            #     plt.close(fig)
-
-            kmeans = KMeans(n_clusters=args.cluster_k, random_state=args.cluster_seed, n_init="auto")
-            c_train = kmeans.fit_predict(z_train)
-
-            # if max_k >= 2 and z_train.shape[1] >= 2:
-            #     fig, ax = plt.subplots(figsize=(6, 5))
-            #     scatter = ax.scatter(
-            #         z_train[:, 0],
-            #         z_train[:, 1],
-            #         c=c_train,
-            #         cmap=plt.cm.get_cmap("tab20", args.cluster_k),
-            #         s=10,
-            #         alpha=0.7,
-            #     )
-            #     ax.set_xlabel("Component 1")
-            #     ax.set_ylabel("Component 2")
-            #     ax.set_title(
-            #         f"Train Projection by Cluster: {args.model_name} / {args.dataset} / fold {i}"
-            #     )
-            #     ax.grid(True, alpha=0.3)
-            #     cbar = fig.colorbar(scatter, ax=ax)
-            #     cbar.set_label("Cluster")
-            #     fig.tight_layout()
-            #     fig.savefig(scatter_path, dpi=150)
-            #     plt.close(fig)
-
-            cluster_classifier_params = {
-                "n_estimators": 100,
-                "random_state": args.cluster_seed,
-                "verbosity": 0,
-            }
-            if args.cluster_k > 2:
-                cluster_classifier_params["objective"] = "multi:softprob"
-                cluster_classifier_params["num_class"] = args.cluster_k
-                cluster_classifier_params["eval_metric"] = "mlogloss"
-            else:
-                cluster_classifier_params["objective"] = "binary:logistic"
-                cluster_classifier_params["eval_metric"] = "logloss"
-
-            cluster_classifier = xgb.XGBClassifier(**cluster_classifier_params)
-            cluster_classifier.fit(X_train, c_train)
-            c_test = cluster_classifier.predict(X_test).astype(int)
-
-            #if we wanted to train a classifier on projections of the tree leaf embeddings instead of original embeddings.
-            # cluster_classifier.fit(z_train, c_train)
-            # c_test = cluster_classifier.predict(z_test).astype(int)
-
-
-            # Old approach: assign each test sample to the nearest training-space centroid.
-            # c_test = kmeans.predict(z_test)
-
-            k = args.cluster_k
-            p_tr = np.bincount(c_train, minlength=k) / len(c_train)
-            p_te = np.bincount(c_test, minlength=k) / len(c_test)
-
-            tv = 0.5 * np.abs(p_tr - p_te).sum()
-
-            cluster_shift["tv"].append(float(tv))
-            cluster_shift["p_train"].append(p_tr.tolist())
-            cluster_shift["p_test"].append(p_te.tolist())
-            cluster_shift["pca_dim"] = reduction_dim
 
         # evaluate on train set
         timers["train-eval"].start()
@@ -459,7 +315,6 @@ def cross_validation(
         predictions=predictions,
         probabilities=probabilities,
         ground_truth=ground_truth,
-        cluster_shift=cluster_shift,
     )
 
 
@@ -630,13 +485,5 @@ def get_experiment_parser():
         help="Random seed for subset selection.",
     )
 
-    experiment_parser.add(
-        "--compute_cluster_shift",
-        action="store_true",
-        help="Compute cluster mixture shift using tree leaf embeddings."
-    )
-    experiment_parser.add("--cluster_k", type=int, default=20)
-    experiment_parser.add("--cluster_pca_dim", type=int, default=20)
-    experiment_parser.add("--cluster_seed", type=int, default=0)
 
     return experiment_parser

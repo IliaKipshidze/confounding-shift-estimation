@@ -1,0 +1,14 @@
+{
+  "xgb_results_dir": "C:\\Users\\Ilia\\Desktop\\UNI III semester\\Relational ML RIL\\tabzilla\\TabZilla\\results_hard\\hard_run_main\\XGBoost",
+  "datasets_dir": "C:\\Users\\Ilia\\Desktop\\UNI III semester\\Relational ML RIL\\tabzilla\\TabZilla\\datasets",
+  "output_dir": "TabZilla\\tmp_saved_xgb_models",
+  "model_seed": 0,
+  "force_cpu": true,
+  "datasets": [
+    {
+      "dataset": "openml__Australian__146818",
+      "num_folds": 10,
+      "manifest_path": "TabZilla\\tmp_saved_xgb_models\\openml__Australian__146818\\manifest.json"
+    }
+  ]
+}
