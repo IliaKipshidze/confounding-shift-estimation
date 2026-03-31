@@ -107,10 +107,6 @@ class TabZillaObjective(object):
                 "cat_dims",
                 "num_classes",
                 "logging_period",
-                "compute_cluster_shift",
-                "cluster_k",
-                "cluster_pca_dim",
-                "cluster_seed",
             ],
         )
 
@@ -141,10 +137,6 @@ class TabZillaObjective(object):
             subset_rows_method=self.experiment_args.subset_rows_method,
             cat_dims=self.dataset.cat_dims,
             num_classes=self.dataset.num_classes,
-            compute_cluster_shift=self.experiment_args.compute_cluster_shift,
-            cluster_k=self.experiment_args.cluster_k,
-            cluster_pca_dim=self.experiment_args.cluster_pca_dim,
-            cluster_seed=self.experiment_args.cluster_seed,
         )
 
         # parameterized model
