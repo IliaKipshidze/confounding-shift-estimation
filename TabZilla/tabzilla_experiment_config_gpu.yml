@@ -2,10 +2,10 @@
 output_dir: ./results/
 
 ###### experiment & trial time limit in seconds (10 hours / 2 hours)
-# experiment_time_limit: 36000
-# trial_time_limit: 7200
-experiment_time_limit: 72000
-trial_time_limit: 14400
+experiment_time_limit: 36000
+trial_time_limit: 7200
+# experiment_time_limit: 72000
+# trial_time_limit: 14400
 
 
 ###### number of trials for hyperparameter search & optimization
